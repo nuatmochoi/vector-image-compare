@@ -3,3 +3,4 @@ docs
 *.pkl
 *.jpg
 *.png
+*.pyc
