@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from pickle import dump, load
 from typing import List, Dict
 from numpy import array
-
+from base64 import b64encode
 from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA, FastICA, FactorAnalysis
 from sklearn.metrics.pairwise import cosine_similarity
@@ -48,6 +48,11 @@ class Embeddings(BaseModel):
 
 class EmbeddingsText(Embeddings):
     input_text: str
+
+
+class EmbeddingsImage(Embeddings):
+    input_text: str
+    image_name: str
 
 
 class EmbeddingsWrapper(BaseModel):
@@ -145,6 +150,43 @@ def create_embeddings(input_text: str) -> Embeddings:
     response_body = json.loads(response.get("body").read())
     return EmbeddingsText(
         embedding=response_body.get("embedding"), input_text=input_text
+    )
+
+
+def create_image_embeddings(image_tag: str, image_name: str) -> Embeddings:
+    """
+    Create Embeddings from Input text
+    """
+    print("STARt")
+
+    model_id = "amazon.titan-embed-image-v1"
+    output_embedding_length = 1024
+
+    with open(image_name, "rb") as fp:
+        input_image = b64encode(fp.read()).decode("utf-8")
+
+    # Create request body.
+    body = json.dumps(
+        {
+            "inputImage": input_image,
+            "embeddingConfig": {"outputEmbeddingLength": output_embedding_length},
+        }
+    )
+
+    bedrock = boto3.client(service_name="bedrock-runtime", region_name="us-east-1")
+
+    accept = "application/json"
+    content_type = "application/json"
+
+    response = bedrock.invoke_model(
+        body=body, modelId=model_id, accept=accept, contentType=content_type
+    )
+
+    response_body = json.loads(response.get("body").read())
+    return EmbeddingsImage(
+        embedding=response_body.get("embedding"),
+        input_text=image_tag,
+        image_name=image_name,
     )
 
 
@@ -261,12 +303,19 @@ def crop_embedding(data_list: EmbeddingsDataStruct, index: int | List[int]):
     )
 
 
-def reads():
+def reads(appends: Embeddings | None = None):
     data_list: EmbeddingsDataStruct
     with open("embeddings.pkl", "rb") as file:
         data_list = load(file)
 
     contents = []
+
+    if appends is not None:
+        if isinstance(appends, EmbeddingsImage):
+            if "dog" in appends.input_text:
+                data_list.dog.append(appends)
+            else:
+                data_list.cat.append(appends)
 
     if False:
         plt.plot(range(1, 51), data_list.dog_dictionary.embedding[:50], color="red")
@@ -326,21 +375,40 @@ def reads():
     # 各点に対応するテキストをプロットに追加
     for i, entity in enumerate(data_list.entity_list):
         if True:
+            color = "blue" if "cat" in entity.key else "red"
+            text = entity.value.input_text
+            if "#input" in text:
+                color = "orange"
+                text = "[Input Image]"
             plt.scatter(
                 embeddings_reduced[i, 0],
                 embeddings_reduced[i, 1],
-                color="blue" if "cat" in entity.key else "red",
-                # embeddings_reduced[i, 2],
+                color=color,
             )
             plt.text(
                 embeddings_reduced[i, 0],
                 embeddings_reduced[i, 1],
-                entity.value.input_text,
+                text,
             )
     plt.legend(["Cat", "Dog"])
     plt.show()
 
 
+def read_image(actual_tag: str, image_name: str):
+    from pathlib import Path
+
+    path = Path(f"{image_name}.pkl")
+    if not path.exists():
+        image_embedding = create_image_embeddings(actual_tag, image_name)
+        with open(path, "wb") as fp:
+            dump(image_embedding, fp)
+    else:
+        with open(path, "rb") as fp:
+            image_embedding = load(fp)
+    return image_embedding
+
+
 if __name__ == "__main__":
+    dog = read_image("cat.#input", "dogear.png")
     # main()
-    reads()
+    reads(dog)
