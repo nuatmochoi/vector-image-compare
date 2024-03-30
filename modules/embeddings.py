@@ -1,17 +1,22 @@
 from base64 import b64encode
 import json
+from typing import List
 import boto3
 from modules.datatype import Embeddings, EmbeddingsText, EmbeddingsImage
+from modules.input_parameter import get_python_input
+
+# 設定を引数から参照する
+input_data = get_python_input()
 
 
 def create_embeddings(input_text: str) -> Embeddings:
     """
     Create Embeddings from Input text
     """
-    print("STARt")
+    print(f"START : {input_text}")
 
-    model_id = "amazon.titan-embed-image-v1"
-    output_embedding_length = 1024
+    model_id = input_data.model_id
+    output_embedding_length = input_data.embedding_vector_dimensions
 
     # Create request body.
     body = json.dumps(
@@ -21,7 +26,9 @@ def create_embeddings(input_text: str) -> Embeddings:
         }
     )
 
-    bedrock = boto3.client(service_name="bedrock-runtime", region_name="us-east-1")
+    bedrock = boto3.Session(
+        profile_name=input_data.profile, region_name=input_data.region
+    ).client(service_name="bedrock-runtime")
 
     accept = "application/json"
     content_type = "application/json"
@@ -40,10 +47,10 @@ def create_image_embeddings(image_tag: str, image_name: str) -> Embeddings:
     """
     Create Embeddings from Input text
     """
-    print("STARt")
+    print(f"START : {image_name}")
 
-    model_id = "amazon.titan-embed-image-v1"
-    output_embedding_length = 1024
+    model_id = input_data.model_id
+    output_embedding_length = input_data.embedding_vector_dimensions
 
     with open(image_name, "rb") as fp:
         input_image = b64encode(fp.read()).decode("utf-8")
@@ -56,7 +63,9 @@ def create_image_embeddings(image_tag: str, image_name: str) -> Embeddings:
         }
     )
 
-    bedrock = boto3.client(service_name="bedrock-runtime", region_name="us-east-1")
+    bedrock = boto3.Session(
+        profile_name=input_data.profile, region_name=input_data.region
+    ).client(service_name="bedrock-runtime")
 
     accept = "application/json"
     content_type = "application/json"
@@ -71,3 +80,11 @@ def create_image_embeddings(image_tag: str, image_name: str) -> Embeddings:
         input_text=image_tag,
         image_name=image_name,
     )
+
+
+def text_list_convert_to_embeddings(name_list: List[str]) -> List[Embeddings]:
+    """
+    テキストの一覧を、一括でベクトル表現に変換する
+    name_list: テキストの一覧
+    """
+    return [create_embeddings(input_text) for input_text in name_list]
