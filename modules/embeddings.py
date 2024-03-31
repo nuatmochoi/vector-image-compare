@@ -4,9 +4,116 @@ from typing import List
 import boto3
 from modules.datatype import Embeddings, EmbeddingsText, EmbeddingsImage
 from modules.input_parameter import get_python_input
+from pydantic import BaseModel
+from abc import ABC
 
 # 設定を引数から参照する
 input_data = get_python_input()
+
+
+class EmbeddingRequest(ABC):
+    model_id: str
+
+    def create_result(self, response_body) -> Embeddings:
+        pass
+
+    @property
+    def body(self) -> str:
+        pass
+
+    @staticmethod
+    def create() -> "EmbeddingRequest":
+        pass
+
+
+class MultimodalTextEmbedding(BaseModel, EmbeddingRequest):
+    input_text: str
+    output_embedding_length: int
+    model_id: str
+
+    @staticmethod
+    def create(input_text: str):
+        return MultimodalTextEmbedding(
+            input_text=input_text,
+            model_id=input_data.model_id,
+            output_embedding_length=input_data.embedding_vector_dimensions,
+        )
+
+    @property
+    def body(self):
+        # 非マルチモーダルの埋め込みモデルなら、embeddingConfigを指定しない
+        if self.model_id == "amazon.titan-embed-text-v1":
+            return json.dumps({"inputText": self.input_text})
+        # マルチモーダルの埋め込みモデルを設定する
+        return json.dumps(
+            {
+                "inputText": self.input_text,
+                "embeddingConfig": {
+                    "outputEmbeddingLength": self.output_embedding_length
+                },
+            }
+        )
+
+    def create_result(self, response_body):
+        return EmbeddingsText(
+            embedding=response_body.get("embedding"), input_text=self.input_text
+        )
+
+
+class MultimodalImageEmbedding(BaseModel, EmbeddingRequest):
+    image_tag: str
+    image_name: str
+    output_embedding_length: int
+    model_id: str
+
+    @staticmethod
+    def create(image_tag: str, image_name: str):
+        return MultimodalImageEmbedding(
+            image_tag=image_tag,
+            image_name=image_name,
+            model_id=input_data.model_id,
+            output_embedding_length=input_data.embedding_vector_dimensions,
+        )
+
+    @property
+    def body(self):
+        with open(self.image_name, "rb") as fp:
+            input_image = b64encode(fp.read()).decode("utf-8")
+
+        return json.dumps(
+            {
+                "inputImage": input_image,
+                "embeddingConfig": {
+                    "outputEmbeddingLength": self.output_embedding_length
+                },
+            }
+        )
+
+    def create_result(self, response_body):
+        return EmbeddingsImage(
+            embedding=response_body.get("embedding"),
+            input_text=self.image_tag,
+            image_name=self.image_name,
+        )
+
+
+def call_api(request: EmbeddingRequest) -> Embeddings:
+    bedrock = boto3.Session(
+        profile_name=input_data.profile, region_name=input_data.region
+    ).client(service_name="bedrock-runtime")
+
+    accept = "application/json"
+    content_type = "application/json"
+
+    response = bedrock.invoke_model(
+        body=request.body,
+        modelId=request.model_id,
+        accept=accept,
+        contentType=content_type,
+    )
+
+    response_body = json.loads(response.get("body").read())
+    return request.create_result(response_body)
 
 
 def create_embeddings(input_text: str) -> Embeddings:
@@ -14,33 +121,7 @@ def create_embeddings(input_text: str) -> Embeddings:
     Create Embeddings from Input text
     """
     print(f"START : {input_text}")
-
-    model_id = input_data.model_id
-    output_embedding_length = input_data.embedding_vector_dimensions
-
-    # Create request body.
-    body = json.dumps(
-        {
-            "inputText": input_text,
-            "embeddingConfig": {"outputEmbeddingLength": output_embedding_length},
-        }
-    )
-
-    bedrock = boto3.Session(
-        profile_name=input_data.profile, region_name=input_data.region
-    ).client(service_name="bedrock-runtime")
-
-    accept = "application/json"
-    content_type = "application/json"
-
-    response = bedrock.invoke_model(
-        body=body, modelId=model_id, accept=accept, contentType=content_type
-    )
-
-    response_body = json.loads(response.get("body").read())
-    return EmbeddingsText(
-        embedding=response_body.get("embedding"), input_text=input_text
-    )
+    return call_api(MultimodalTextEmbedding.create(input_text))
 
 
 def create_image_embeddings(image_tag: str, image_name: str) -> Embeddings:
@@ -48,38 +129,7 @@ def create_image_embeddings(image_tag: str, image_name: str) -> Embeddings:
     Create Embeddings from Input text
     """
     print(f"START : {image_name}")
-
-    model_id = input_data.model_id
-    output_embedding_length = input_data.embedding_vector_dimensions
-
-    with open(image_name, "rb") as fp:
-        input_image = b64encode(fp.read()).decode("utf-8")
-
-    # Create request body.
-    body = json.dumps(
-        {
-            "inputImage": input_image,
-            "embeddingConfig": {"outputEmbeddingLength": output_embedding_length},
-        }
-    )
-
-    bedrock = boto3.Session(
-        profile_name=input_data.profile, region_name=input_data.region
-    ).client(service_name="bedrock-runtime")
-
-    accept = "application/json"
-    content_type = "application/json"
-
-    response = bedrock.invoke_model(
-        body=body, modelId=model_id, accept=accept, contentType=content_type
-    )
-
-    response_body = json.loads(response.get("body").read())
-    return EmbeddingsImage(
-        embedding=response_body.get("embedding"),
-        input_text=image_tag,
-        image_name=image_name,
-    )
+    return call_api(MultimodalImageEmbedding.create(image_tag, image_name))
 
 
 def text_list_convert_to_embeddings(name_list: List[str]) -> List[Embeddings]:

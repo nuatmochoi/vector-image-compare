@@ -11,11 +11,13 @@ from modules.datatype import (  # noqa: F401
     EmbeddingsWrapper,  # pickleが参照するため、importする
 )
 from modules.embeddings import (
+    create_embeddings,
     create_image_embeddings,
     text_list_convert_to_embeddings,
 )
 from modules.input_parameter import Input, ProcessName, get_python_input
 from modules.logic import crop_embedding, print_dog_or_cat, reduce_embedding
+import japanize_matplotlib  # noqa: F401
 
 
 def read_name_list(file_name: str):
@@ -33,8 +35,8 @@ def create_embedding_pickle_data(input_data: Input):
     文字列データをベクトル表現に変換して、pickleファイルに保存する
     """
     dictionary_text = {
-        "dog": "Dog",
-        "cat": "Cat",
+        "dog": input_data.dog_target_key,
+        "cat": input_data.cat_target_key,
     }
     # 対象のデータファイル（テキスト）を読み込む
     cat_list = read_name_list(input_data.create_args_cat_csv_file)
@@ -205,7 +207,7 @@ def visualize_request_with_pickle(input_data: Input, appends: Embeddings | None 
             text,
         )
     # 判例を追加
-    plt.legend(["Cat", "Dog"])
+    plt.legend([input_data.cat_target_key, input_data.dog_target_key])
     # グラフを表示する
     plt.show()
 
@@ -249,6 +251,15 @@ if __name__ == "__main__":
             )
             # ベクトル化した画像を可視化する
             visualize_request_with_pickle(input_data, data)
+        elif input_data.input_text is not None:
+            # テキストがあるなら、テキストをベクトル化する
+            data = create_embeddings(input_data.input_text)
+            # ベクトル化したテキストを可視化する
+            visualize_request_with_pickle(input_data, data)
         else:
             # データ全体を可視化する
             visualize_request_with_pickle(input_data)
+    elif input_data.process == ProcessName.debug:
+        # 引数を出力する
+        print("DEBUG")
+        print(input_data)

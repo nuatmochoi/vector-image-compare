@@ -40,6 +40,7 @@ class ProcessName(Enum):
     create = "create"
     init = "init"
     read = "read"
+    debug = "debug"
 
 
 parser = ArgumentParser()
@@ -49,6 +50,7 @@ add_option_str(parser, "--index-mask-pickle-file", defaults="index-mask.pkl")
 add_option_str(parser, "--create-args-cat-csv-file", defaults="cat_name.csv")
 add_option_str(parser, "--create-args-dog-csv-file", defaults="dog_name.csv")
 add_option_str(parser, "--image-file")
+add_option_str(parser, "--input-text")
 add_option_str(parser, "--image-type", defaults="dog")
 add_option_flag(parser, "--disable-image-file-cache")
 add_option_flag(parser, "--show-criterion-graph")
@@ -61,6 +63,8 @@ add_option_int(parser, "--embedding-vector-dimensions", defaults=1024)
 add_option_str(parser, "--region", defaults="us-east-1")
 add_option_str(parser, "--profile", defaults="default")
 add_option_str(parser, "--model-id", defaults="amazon.titan-embed-image-v1")
+add_option_str(parser, "--dog-target-key", defaults="Dog")
+add_option_str(parser, "--cat-target-key", defaults="Cat")
 
 
 class Input(BaseModel):
@@ -70,6 +74,7 @@ class Input(BaseModel):
     create_args_cat_csv_file: str
     create_args_dog_csv_file: str
     image_file: Optional[str]
+    input_text: Optional[str]
     disable_image_file_cache: bool
     image_type: ImageType
     show_criterion_graph: bool
@@ -82,6 +87,8 @@ class Input(BaseModel):
     region: str
     profile: str
     model_id: str
+    dog_target_key: str
+    cat_target_key: str
 
 
 def get_python_input() -> Input:
@@ -92,4 +99,5 @@ def get_python_input() -> Input:
         input.init_classification_each_index = True
         # 画像は分析対象としない
         input.image_file = None
+        input.input_text = None
     return input

@@ -6,6 +6,10 @@ from modules.datatype import (
     EmbeddingsWrapper,
     EmbeddingsDataStruct,
 )
+from modules.input_parameter import get_python_input
+
+# 設定を引数から参照する
+input_data = get_python_input()
 
 
 def print_dog_or_cat(
@@ -33,8 +37,13 @@ def print_dog_or_cat(
             # フィルタ条件があるなら、フィルタに一致しない場合は結果だけを返す
             if not (filter_condition in item.input_text):
                 return res
+        # 判定結果を可視化する
+        if res == DogOrCat.cat:
+            value = input_data.cat_target_key
+        else:
+            value = input_data.dog_target_key
         # ログ出力して、結果を返す
-        print("{name} : {result}".format_map({"name": text, "result": res.value}))
+        print("{name} : {result}".format_map({"name": text, "result": value}))
         return res
 
     # 猫の分類結果を取得、期待値と一致しないものをカウントする
