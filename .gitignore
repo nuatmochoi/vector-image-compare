@@ -1,4 +1,5 @@
 .venv
+.env
 docs
 *.pkl
 *.jpg

@@ -103,6 +103,7 @@ add_option_str(parser, "--dog-target-key", defaults="Dog")
 add_option_str(parser, "--cat-target-key", defaults="Cat")
 add_option_flag(parser, "--show-original-result")
 add_option_str(parser, "--cohere-embeddings-type", defaults="clustering")
+add_option_int(parser, "--request-delay", defaults=0)
 
 
 class Input(BaseModel):
@@ -129,6 +130,7 @@ class Input(BaseModel):
     cat_target_key: str
     show_original_result: bool
     cohere_embeddings_type: CohereEmbeddingsType
+    request_delay: int
 
 
 def get_python_input() -> Input:
