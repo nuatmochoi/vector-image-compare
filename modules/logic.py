@@ -22,7 +22,7 @@ def print_dog_or_cat(
     dog_count = 0
     cat_count = 0
 
-    def print_contents(item):
+    def print_contents(item, required: DogOrCat):
         """
         判定後、ログを出力する
         """
@@ -43,19 +43,26 @@ def print_dog_or_cat(
         else:
             value = input_data.dog_target_key
         # ログ出力して、結果を返す
-        print("{name} : {result}".format_map({"name": text, "result": value}))
+        if res == required:
+            print(
+                "{name} : {result} : True".format_map({"name": text, "result": value})
+            )
+        else:
+            print(
+                "{name} : {result} : False".format_map({"name": text, "result": value})
+            )
         return res
 
     # 猫の分類結果を取得、期待値と一致しないものをカウントする
     for item in data_list.cat:
-        if print_contents(item) != DogOrCat.cat:
+        if print_contents(item, DogOrCat.cat) != DogOrCat.cat:
             incorrect += 1
             dog_count += 1
         else:
             cat_count += 1
     # 犬の分類結果を取得、期待値と一致しないものをカウントする
     for item in data_list.dog:
-        if print_contents(item) != DogOrCat.dog:
+        if print_contents(item, DogOrCat.dog) != DogOrCat.dog:
             incorrect += 1
             cat_count += 1
         else:

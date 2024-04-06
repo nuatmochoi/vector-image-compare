@@ -180,7 +180,20 @@ def visualize_request_with_pickle(input_data: Input, appends: Embeddings | None 
         print(f"Non Reduced Data: dims ({input_data.embedding_vector_dimensions})")
         print_dog_or_cat(data_list, quiet=False, filter_condition="#input")
     else:
-        print_dog_or_cat(reduced, quiet=False)
+        if input_data.show_original_result:
+            print(f"Non Reduced Data: dims ({input_data.embedding_vector_dimensions})")
+            res_incorrect, res_dog, res_cat = print_dog_or_cat(data_list, quiet=False)
+            print("--------------------------------------------")
+            print(
+                f"Result : {(1.0 - (float(res_incorrect) / (res_dog + res_cat))) * 100}%"
+            )
+        else:
+            print(f"Reduced Data: dims ({input_data.pca_dims})")
+            res_incorrect, res_dog, res_cat = print_dog_or_cat(reduced, quiet=False)
+            print("--------------------------------------------")
+            print(
+                f"Result : {(1.0 - (float(res_incorrect) / (res_dog + res_cat))) * 100}%"
+            )
 
     # 次元数を削減したベクトルデータを取得する
     embeddings_reduced = array([e.value.embedding for e in reduced.entity_list])

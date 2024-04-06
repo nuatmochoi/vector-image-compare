@@ -7,6 +7,11 @@ from modules.input_parameter import get_python_input
 from pydantic import BaseModel
 from abc import ABC
 
+# モデルID : Titan Embeddings
+TITAN_EMBED_TEXT_V1 = "amazon.titan-embed-text-v1"
+# モデルID : Cohere Embeddings
+COHERE_EMBED_MULTILINGUAL_V3 = "cohere.embed-multilingual-v3"
+
 # 設定を引数から参照する
 input_data = get_python_input()
 
@@ -42,12 +47,33 @@ class MultimodalTextEmbedding(BaseModel, EmbeddingRequest):
     @property
     def body(self):
         # 非マルチモーダルの埋め込みモデルなら、embeddingConfigを指定しない
-        if self.model_id == "amazon.titan-embed-text-v1":
-            return json.dumps({"inputText": self.input_text})
+        if self.model_id == TITAN_EMBED_TEXT_V1:
+            # 非マルチモーダル、Titan Embeddings
+            return json.dumps(
+                {
+                    # 対象のテキスト
+                    "inputText": self.input_text
+                }
+            )
+        if self.model_id == COHERE_EMBED_MULTILINGUAL_V3:
+            # 非マルチモーダル、Cohere Embeddings
+            return json.dumps(
+                {
+                    # 対象のテキスト
+                    "texts": [self.input_text],
+                    # 埋め込みモデルの利用想定
+                    "input_type": input_data.cohere_embeddings_type.value,
+                    # トークンの最大長を超えたとき、どのように処理をするか
+                    # None -> 何もしない
+                    "truncate": "NONE",
+                }
+            )
         # マルチモーダルの埋め込みモデルを設定する
         return json.dumps(
             {
+                # 対象のテキスト
                 "inputText": self.input_text,
+                # 出力する埋め込みベクトルの次元数
                 "embeddingConfig": {
                     "outputEmbeddingLength": self.output_embedding_length
                 },
@@ -55,6 +81,10 @@ class MultimodalTextEmbedding(BaseModel, EmbeddingRequest):
         )
 
     def create_result(self, response_body):
+        if self.model_id == COHERE_EMBED_MULTILINGUAL_V3:
+            return EmbeddingsText(
+                embedding=response_body.get("embeddings")[0], input_text=self.input_text
+            )
         return EmbeddingsText(
             embedding=response_body.get("embedding"), input_text=self.input_text
         )
