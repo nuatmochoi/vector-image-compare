@@ -35,8 +35,8 @@ def create_embedding_pickle_data(input_data: Input):
     文字列データをベクトル表現に変換して、pickleファイルに保存する
     """
     dictionary_text = {
-        "dog": input_data.dog_target_key,
-        "cat": input_data.cat_target_key,
+        "Positive": input_data.dog_target_key,
+        "Negative": input_data.cat_target_key,
     }
     # 対象のデータファイル（テキスト）を読み込む
     cat_list = read_name_list(input_data.create_args_cat_csv_file)
@@ -44,8 +44,8 @@ def create_embedding_pickle_data(input_data: Input):
     # 対象のテキストをベクトル表現に変換する
     cat_vector_list = text_list_convert_to_embeddings(cat_list)
     dog_vector_list = text_list_convert_to_embeddings(dog_list)
-    dog_dictionary_vector = text_list_convert_to_embeddings([dictionary_text["dog"]])
-    cat_dictionary_vector = text_list_convert_to_embeddings([dictionary_text["cat"]])
+    dog_dictionary_vector = text_list_convert_to_embeddings([dictionary_text["Positive"]])
+    cat_dictionary_vector = text_list_convert_to_embeddings([dictionary_text["Negative"]])
     with open(input_data.embeddings_pickle_file, "wb") as file:
         # Pickle形式で保存する
         dump(
@@ -67,6 +67,9 @@ def visualize_request_with_pickle(input_data: Input, appends: Embeddings | None 
     appends: 引数<image_file>として入力された画像データのベクトル表現
     """
     # Pickleから全体のベクトル表現を読みこむ
+    plt.rc('font', family='Malgun Gothic')
+    plt.rcParams['axes.unicode_minus'] = False
+
     data_list: EmbeddingsDataStruct
     with open(input_data.embeddings_pickle_file, "rb") as file:
         data_list = load(file)

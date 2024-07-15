@@ -27,6 +27,9 @@ OPEN_AI_ADA_2_EMBEDDINGS = "text-embedding-ada-002"
 # モデルID : OpenAI Embeddings v3
 OPEN_AI_EMBEDDINGS_V3 = "text-embedding-3-large"
 
+TITAN_EMBED_TEXT_V2 = "amazon.titan-embed-text-v2:0"
+
+
 # 設定を引数から参照する
 input_data = get_python_input()
 
@@ -40,6 +43,8 @@ def get_provider(model_id: str):
     if model_id == COHERE_EMBED_MULTILINGUAL_V3:
         return PROVIDER_AWS
     if model_id == TITAN_EMBED_IMAGE_TEXT_V1:
+        return PROVIDER_AWS
+    if model_id == TITAN_EMBED_TEXT_V2:
         return PROVIDER_AWS
     return PROVIDER_OPENAI
 
@@ -79,7 +84,7 @@ class MultimodalTextEmbedding(BaseModel, EmbeddingRequest):
     @property
     def body(self):
         # 非マルチモーダルの埋め込みモデルなら、embeddingConfigを指定しない
-        if self.model_id == TITAN_EMBED_TEXT_V1:
+        if self.model_id == TITAN_EMBED_TEXT_V1 or self.model_id == TITAN_EMBED_TEXT_V2:
             # 非マルチモーダル、Titan Embeddings
             return json.dumps(
                 {
@@ -100,7 +105,7 @@ class MultimodalTextEmbedding(BaseModel, EmbeddingRequest):
                     "truncate": "NONE",
                 }
             )
-        if self.model_id == TITAN_EMBED_IMAGE_TEXT_V1:
+        if self.model_id == TITAN_EMBED_IMAGE_TEXT_V1 :
             # マルチモーダルの埋め込みモデルを設定する
             return json.dumps(
                 {
